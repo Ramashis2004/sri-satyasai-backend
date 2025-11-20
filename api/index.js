@@ -1,5 +1,4 @@
 const express = require("express");
-const serverless = require("serverless-http");
 require("dotenv").config();
 const cors = require("cors");
 const connectDB = require("../config/db");
@@ -21,13 +20,24 @@ const publicAnnouncementRoutes = require("../routes/publicAnnouncementRoutes");
 const publicContactRoutes = require("../routes/publicContactRoutes");
 
 const app = express();
+
+// Middlewares
 app.use(express.json());
 app.use(cors());
 
-// Connect to DB once per serverless cold start
+// Connect MongoDB
 connectDB();
 
-// API routes
+// Health Check Route
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "Backend running successfully",
+    time: new Date(),
+  });
+});
+
+// API Routes
 app.use("/api", authRoutes);
 app.use("/api/admin", adminEventRoutes);
 app.use("/api/admin", adminDistrictEventRoutes);
@@ -43,20 +53,10 @@ app.use("/api/public", publicEventRoutes);
 app.use("/api/public", publicAnnouncementRoutes);
 app.use("/api/public", publicContactRoutes);
 
-app.get("/health", (req, res) => {
-  res.status(200).json({
-    status: "ok",
-    message: "Deployment successful",
-    time: new Date(),
-  });
+// Start Server (Render uses PORT env)
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
 
-
-// Local development only
-if (require.main === module) {
-  const PORT = process.env.PORT || 4000;
-  app.listen(PORT, () => console.log(`Local API: http://localhost:${PORT}`));
-}
-
-// Export for Vercel serverless
-module.exports = serverless(app);
+module.exports = app; // for testing (optional)
