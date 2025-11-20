@@ -4,6 +4,7 @@ require("dotenv").config();
 const cors = require("cors");
 const connectDB = require("../config/db");
 
+// Import all routes
 const authRoutes = require("../routes/authRoutes");
 const adminRoutes = require("../routes/adminRoutes");
 const districtRoutes = require("../routes/districtRoutes");
@@ -23,8 +24,10 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Connect to DB once per serverless cold start
 connectDB();
 
+// API routes
 app.use("/api", authRoutes);
 app.use("/api/admin", adminEventRoutes);
 app.use("/api/admin", adminDistrictEventRoutes);
@@ -40,13 +43,11 @@ app.use("/api/public", publicEventRoutes);
 app.use("/api/public", publicAnnouncementRoutes);
 app.use("/api/public", publicContactRoutes);
 
-// Start a local server when this file is executed directly (e.g., `node api/index.js`)
+// Local development only
 if (require.main === module) {
   const PORT = process.env.PORT || 4000;
-  app.listen(PORT, () => {
-    console.log(`API server listening on http://localhost:${PORT}`);
-  });
+  app.listen(PORT, () => console.log(`Local API: http://localhost:${PORT}`));
 }
 
-// Export serverless handler for deployment (e.g., Vercel/AWS Lambda)
+// Export for Vercel serverless
 module.exports = serverless(app);
