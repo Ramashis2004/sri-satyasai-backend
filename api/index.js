@@ -43,6 +43,15 @@ app.use("/api/public", publicEventRoutes);
 app.use("/api/public", publicAnnouncementRoutes);
 app.use("/api/public", publicContactRoutes);
 
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "ok",
+    message: "Deployment successful",
+    time: new Date(),
+  });
+});
+
+
 // Local development only
 if (require.main === module) {
   const PORT = process.env.PORT || 4000;
