@@ -6,6 +6,7 @@ const districtEventSchema = new mongoose.Schema(
     description: { type: String, trim: true },
     date: { type: Date },
     venue: { type: String, trim: true },
+     gender: { type: String, enum: ["boy", "girl", "both"], default: "both" },
   },
   { timestamps: true }
 );

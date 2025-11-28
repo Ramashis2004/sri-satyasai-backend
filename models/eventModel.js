@@ -6,6 +6,7 @@ const eventSchema = new mongoose.Schema(
     description: { type: String, trim: true },
     date: { type: Date },
     venue: { type: String, trim: true },
+     gender: { type: String, enum: ["boy", "girl", "both"], default: "both" },
     audience: { type: String, enum: ["junior", "senior", "both"], default: "both" },
     isGroupEvent: { type: Boolean, default: false },
     participantCount: { type: Number, min: 2, default: null },

@@ -17,6 +17,7 @@ exports.create = async (req, res) => {
       description: Joi.string().allow(""),
       date: Joi.date().allow(null),
       venue: Joi.string().allow(""),
+      gender: Joi.string().valid("boy", "girl", "both").optional(),
     });
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
@@ -26,6 +27,7 @@ exports.create = async (req, res) => {
       description: req.body.description || "",
       date: req.body.date ? new Date(req.body.date) : null,
       venue: req.body.venue || "",
+      gender: req.body.gender || "both",
     };
 
     // unique title guard (case-insensitive)
@@ -47,6 +49,7 @@ exports.update = async (req, res) => {
       description: Joi.string().allow(""),
       date: Joi.date().allow(null),
       venue: Joi.string().allow(""),
+      gender: Joi.string().valid("boy", "girl", "both").optional(),
     });
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
@@ -61,6 +64,7 @@ exports.update = async (req, res) => {
     if (req.body.description !== undefined) update.description = req.body.description;
     if (req.body.date !== undefined) update.date = req.body.date ? new Date(req.body.date) : null;
     if (req.body.venue !== undefined) update.venue = req.body.venue;
+     if (req.body.gender !== undefined) update.gender = req.body.gender;
 
     const saved = await DistrictEvent.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!saved) return res.status(404).json({ message: "Event not found" });

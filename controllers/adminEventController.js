@@ -23,6 +23,7 @@ exports.create = async (req, res) => {
       description: Joi.string().allow(""),
       date: Joi.date().allow(null),
       venue: Joi.string().allow(""),
+      gender: Joi.string().valid("boy", "girl", "both").optional(),
       audience: Joi.string().valid("junior", "senior", "both").optional(),
       isGroupEvent: Joi.boolean().optional(),
       participantCount: Joi.number().integer().min(2).allow(null).optional(),
@@ -30,7 +31,7 @@ exports.create = async (req, res) => {
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
 
-    const { title, description, date, venue, audience, isGroupEvent, participantCount } = req.body;
+    const { title, description, date, venue, gender, audience, isGroupEvent, participantCount } = req.body;
 
     // Unique title (case-insensitive)
     const exists = await Event.findOne({ title: new RegExp(`^${title}\s*$`, "i") });
@@ -41,6 +42,7 @@ exports.create = async (req, res) => {
       description: description || "",
       date: date ? new Date(date) : null,
       venue: venue || "",
+       gender: gender || "both",
       audience: audience || "both",
       isGroupEvent: !!isGroupEvent,
       participantCount: isGroupEvent ? (participantCount || 2) : null,
@@ -60,6 +62,7 @@ exports.update = async (req, res) => {
       description: Joi.string().allow(""),
       date: Joi.date().allow(null),
       venue: Joi.string().allow(""),
+      gender: Joi.string().valid("boy", "girl", "both").optional(),
       audience: Joi.string().valid("junior", "senior", "both").optional(),
       isGroupEvent: Joi.boolean().optional(),
       participantCount: Joi.number().integer().min(2).allow(null).optional(),
@@ -76,6 +79,7 @@ exports.update = async (req, res) => {
     if (req.body.description !== undefined) update.description = req.body.description;
     if (req.body.date !== undefined) update.date = req.body.date ? new Date(req.body.date) : null;
     if (req.body.venue !== undefined) update.venue = req.body.venue;
+     if (req.body.gender !== undefined) update.gender = req.body.gender;
     if (req.body.audience !== undefined) update.audience = req.body.audience;
     if (req.body.isGroupEvent !== undefined) update.isGroupEvent = !!req.body.isGroupEvent;
     if (req.body.participantCount !== undefined) update.participantCount = update.isGroupEvent ? req.body.participantCount : null;
