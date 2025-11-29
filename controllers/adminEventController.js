@@ -1,6 +1,5 @@
 const Joi = require("joi");
 const Event = require("../models/eventModel");
-// Note: Admin creates school events by providing schoolName directly.
 
 // Normalize title for duplicate checks
 function normalizeTitle(t) {
@@ -28,29 +27,42 @@ exports.create = async (req, res) => {
       isGroupEvent: Joi.boolean().optional(),
       participantCount: Joi.number().integer().min(2).allow(null).optional(),
     });
+
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
 
-    const { title, description, date, venue, gender, audience, isGroupEvent, participantCount } = req.body;
+    const { title, audience } = req.body;
 
-    // Unique title (case-insensitive)
-    const exists = await Event.findOne({ title: new RegExp(`^${title}\s*$`, "i") });
-    if (exists) return res.status(409).json({ message: "Event title already exists" });
+    // ---- Duplicate Check (Title + Audience must be unique)
+    const exists = await Event.findOne({
+      title: new RegExp(`^${title}\\s*$`, "i"),
+      audience: audience || "both",
+    });
 
+    if (exists) {
+      return res.status(409).json({
+        message: "An event with the same title and audience already exists",
+      });
+    }
+
+    // Create Event
     const doc = await Event.create({
       title: title.trim(),
-      description: description || "",
-      date: date ? new Date(date) : null,
-      venue: venue || "",
-       gender: gender || "both",
-      audience: audience || "both",
-      isGroupEvent: !!isGroupEvent,
-      participantCount: isGroupEvent ? (participantCount || 2) : null,
+      description: req.body.description || "",
+      date: req.body.date ? new Date(req.body.date) : null,
+      venue: req.body.venue || "",
+      gender: req.body.gender || "both",
+      audience: req.body.audience || "both",
+      isGroupEvent: !!req.body.isGroupEvent,
+      participantCount: req.body.isGroupEvent ? (req.body.participantCount || 2) : null,
     });
+
     res.status(201).json(doc);
+
   } catch (e) {
-    // handle unique index errors gracefully
-    if (e && e.code === 11000) return res.status(409).json({ message: "Event title already exists" });
+    if (e.code === 11000)
+      return res.status(409).json({ message: "Duplicate event detected" });
+
     res.status(500).json({ message: e.message });
   }
 };
@@ -67,28 +79,49 @@ exports.update = async (req, res) => {
       isGroupEvent: Joi.boolean().optional(),
       participantCount: Joi.number().integer().min(2).allow(null).optional(),
     });
+
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
 
-    const update = {};
-    if (req.body.title != null) {
-      const dup = await Event.findOne({ _id: { $ne: req.params.id }, title: new RegExp(`^${req.body.title}\s*$`, "i") });
-      if (dup) return res.status(409).json({ message: "Event title already exists" });
-      update.title = req.body.title.trim();
+    const { title, audience } = req.body;
+
+    // ---- Duplicate Check (Title + Audience must be unique, excluding current ID)
+    if (title) {
+      const dup = await Event.findOne({
+        _id: { $ne: req.params.id },
+        title: new RegExp(`^${title}\\s*$`, "i"),
+        audience: audience || req.body.audience || "both",
+      });
+
+      if (dup) {
+        return res.status(409).json({
+          message: "An event with the same title and audience already exists",
+        });
+      }
     }
+
+    // Build update object
+    const update = {};
+    if (title !== undefined) update.title = title.trim();
     if (req.body.description !== undefined) update.description = req.body.description;
     if (req.body.date !== undefined) update.date = req.body.date ? new Date(req.body.date) : null;
     if (req.body.venue !== undefined) update.venue = req.body.venue;
-     if (req.body.gender !== undefined) update.gender = req.body.gender;
+    if (req.body.gender !== undefined) update.gender = req.body.gender;
     if (req.body.audience !== undefined) update.audience = req.body.audience;
     if (req.body.isGroupEvent !== undefined) update.isGroupEvent = !!req.body.isGroupEvent;
-    if (req.body.participantCount !== undefined) update.participantCount = update.isGroupEvent ? req.body.participantCount : null;
+    if (req.body.participantCount !== undefined)
+      update.participantCount = req.body.isGroupEvent ? req.body.participantCount : null;
 
     const saved = await Event.findByIdAndUpdate(req.params.id, update, { new: true });
+
     if (!saved) return res.status(404).json({ message: "Event not found" });
+
     res.json(saved);
+
   } catch (e) {
-    if (e && e.code === 11000) return res.status(409).json({ message: "Event title already exists" });
+    if (e.code === 11000)
+      return res.status(409).json({ message: "Duplicate event detected" });
+
     res.status(500).json({ message: e.message });
   }
 };
