@@ -63,7 +63,7 @@ exports.listParticipants = async (req, res) => {
     const items = isSchool
       ? await Participant.find({ eventId })
           .lean()
-          .select("_id name className gender eventId marks evaluation schoolName districtId present")
+          .select("_id name className gender eventId marks evaluation schoolName districtId present group")
       : await DistrictParticipant.find({ eventId })
           .lean()
           .select("_id name className gender eventId marks evaluation districtId present");
