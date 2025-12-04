@@ -14,6 +14,9 @@ const EvaluationFormatSchema = new mongoose.Schema(
     eventId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
     criteria: { type: [CriterionSchema], default: [] },
     totalMarks: { type: Number, default: 0 },
+    judges: { type: [String], default: [] },
+    coordinator1: { type: String, default: "" },
+    coordinator2: { type: String, default: "" },
     updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false },
   },
   { timestamps: true }
