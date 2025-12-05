@@ -99,7 +99,7 @@ exports.login = async (req, res) => {
     const user = await DistrictCoordinator.findOne({ email })
       .lean()
       .select("_id password approved name email mobile districtId");
-    if (!user) return res.status(404).json({ message: "User not" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     const validPass = await bcrypt.compare(password, user.password);
     if (!validPass) return res.status(400).json({ message: "Invalid credentials" });
