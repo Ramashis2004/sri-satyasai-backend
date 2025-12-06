@@ -98,26 +98,47 @@ exports.createTeacher = async (req, res) => {
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
 
-    let eventId;
-    if (req.body.eventId) {
-      const ev = await DistrictEvent.findById(req.body.eventId);
+    // ⬇️ Extract from req.body
+    const { name, email, mobile, member, gender, eventId } = req.body;
+    const districtId = req.districtScope.districtId;
+
+    let _eventId = null;
+    if (eventId) {
+      const ev = await DistrictEvent.findById(eventId);
       if (!ev) return res.status(404).json({ message: "Event not found" });
-      eventId = ev._id;
+      _eventId = ev._id;
     }
 
+    // 🔥 Duplicate validation fixed
+    const exists = await DistrictTeacher.findOne({
+      name,
+      districtId,
+      eventId: _eventId,
+      gender: (gender || "").toLowerCase(),
+    });
+
+    if (exists) {
+      return res.status(400).json({
+        message: "Duplicate teacher: Same name already exists in this event with same district & gender."
+      });
+    }
+
+    // Create
     const doc = await DistrictTeacher.create({
-      name: req.body.name,
-      email: req.body.email,
-      mobile: req.body.mobile,
-      member: req.body.member,
-      gender: req.body.gender,
-      eventId,
-      districtId: req.districtScope.districtId,
+      name,
+      email,
+      mobile,
+      member,
+      gender,
+      eventId: _eventId,
+      districtId,
       createdBy: req.user.id,
     });
-    res.status(201).json({ message: "Teacher created", teacher: doc });
+
+    return res.status(201).json({ message: "Teacher created", teacher: doc });
+
   } catch (e) {
-    res.status(500).json({ message: e.message });
+    return res.status(500).json({ message: e.message });
   }
 };
 

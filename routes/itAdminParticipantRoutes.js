@@ -13,11 +13,13 @@ router.use(auth, authorizeRoles("it_admin"));
 router.get("/participants", ctrl.listParticipants);
 router.post("/participants", ctrl.createParticipant);
 router.patch("/participants/:id", ctrl.updateParticipant);
+router.delete("/participants/:id", ctrl.deleteParticipant);
 router.post("/participants/finalize", ctrl.finalizeParticipants);
 
 router.get("/teachers", tctrl.listTeachers);
 router.post("/teachers", tctrl.createTeacher);
 router.patch("/teachers/:id", tctrl.updateTeacher);
+router.delete("/teachers/:id", tctrl.deleteTeacher);
 router.post("/teachers/finalize", tctrl.finalizeTeachers);
 
 // Read-only event listings for IT Admin filters

@@ -33,6 +33,18 @@ exports.createTeacher = async (req, res) => {
     const { source, name, phone, mobile, gender, member, eventId, districtId, schoolName } = req.body;
 
     if (source === "school") {
+        const exists = await AccompanyingTeacher.findOne({
+    name,
+    districtId,
+    eventId,
+    gender: (gender || "").toLowerCase(),
+  });
+
+  if (exists) {
+    return res.status(400).json({
+      message: "Duplicate teacher: Same name already exists in this event with same district & gender."
+    });
+  }
       const payload = {
         name,
         mobile: mobile || phone || "",
@@ -46,6 +58,19 @@ exports.createTeacher = async (req, res) => {
       const doc = await AccompanyingTeacher.create(payload);
       return res.status(201).json({ message: "Teacher added", teacher: doc });
     } else {
+        // 🔥 Duplicate validation
+      const exists = await DistrictAccompanyingTeacher.findOne({
+        name,
+        districtId,
+        eventId,
+        gender: (gender || "").toLowerCase(),
+      });
+
+      if (exists) {
+        return res.status(400).json({
+          message: "Duplicate teacher: Same name already exists in this event with same district & gender."
+        });
+      }
       const payload = {
         name,
         mobile: mobile || phone || "",
@@ -174,6 +199,36 @@ exports.updateTeacher = async (req, res) => {
 
     await doc.save();
     res.json({ message: "Teacher updated", teacher: doc });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+exports.deleteTeacher = async (req, res) => {
+  try {
+    const schema = Joi.object({
+      source: Joi.string().valid("school", "district").required(),
+    });
+
+    const { error } = schema.validate(req.query); // ⬅ change req.body → req.query
+    if (error) return res.status(400).json({ message: error.details[0].message });
+
+    const { id } = req.params;
+    const { source } = req.query; // ⬅ from query instead of body
+
+    const Model = source === "school" ? AccompanyingTeacher : DistrictAccompanyingTeacher;
+
+    const doc = await Model.findById(id);
+    if (!doc) return res.status(404).json({ message: "Teacher not found" });
+
+    if (doc.frozen) {
+      return res.status(400).json({ message: "Cannot delete a frozen record" });
+    }
+
+    await Model.findByIdAndDelete(id);
+
+    res.json({ message: "Teacher deleted successfully" });
+
   } catch (e) {
     res.status(500).json({ message: e.message });
   }

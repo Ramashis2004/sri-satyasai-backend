@@ -107,6 +107,19 @@ exports.createParticipant = async (req, res) => {
     const { source, eventId, name, className, gender, group, districtId, schoolName } = req.body;
 
     if (source === "school") {
+        const exists = await Participant.findOne({
+    name,
+    districtId,
+    eventId,
+    gender,
+    className
+  });
+
+  if (exists) {
+    return res.status(400).json({
+      message: "Duplicate entry: Same participant already exists in this event for same class & gender under same district."
+    });
+  }
       if (!districtId || !schoolName)
         return res.status(400).json({ message: "districtId and schoolName are required for school participants" });
       const ev = await Event.findById(eventId);
@@ -124,6 +137,19 @@ exports.createParticipant = async (req, res) => {
       });
       return res.status(201).json({ message: "Participant added", participant });
     } else {
+        const exists = await DistrictParticipant.findOne({
+    name,
+    districtId,
+    eventId,
+    gender,
+    className
+  });
+
+  if (exists) {
+    return res.status(400).json({
+      message: "Duplicate entry: Same participant already exists in this district event for same class & gender."
+    });
+  }
       if (!districtId)
         return res.status(400).json({ message: "districtId is required for district participants" });
       const dev = await DistrictEvent.findById(eventId);
@@ -167,12 +193,35 @@ exports.updateParticipant = async (req, res) => {
     const doc = await Model.findById(id);
     if (!doc) return res.status(404).json({ message: "Participant not found" });
 
+    // Restrict editing if frozen
     if (doc.frozen) {
       const updatesKeys = Object.keys(updates || {});
       const onlyToggleFrozen = updatesKeys.length === 1 && typeof updates.frozen !== 'undefined';
       if (!onlyToggleFrozen) return res.status(400).json({ message: "Cannot update a frozen participant" });
     }
 
+    // ------------------ 🔥 Duplicate Validation Before Save ------------------ //
+    const checkName = updates.name ?? doc.name;
+    const checkClass = updates.className ?? doc.className;
+    const checkGender = updates.gender ?? doc.gender;
+    const checkEvent = updates.eventId ?? doc.eventId;
+
+    const duplicate = await Model.findOne({
+      _id: { $ne: id },                // ignore existing record
+      name: checkName,
+      className: checkClass,
+      gender: checkGender,
+      eventId: checkEvent,
+      districtId: doc.districtId       // must match same district
+    });
+
+    if (duplicate) {
+      return res.status(400).json({
+        message: "Duplicate participant exists in the same event, class, gender & district."
+      });
+    }
+
+    // ----------------- Apply Allowed Updates ----------------- //
     if (typeof updates.name !== "undefined") doc.name = updates.name;
     if (typeof updates.className !== "undefined") doc.className = updates.className;
     if (typeof updates.gender !== "undefined") doc.gender = updates.gender;
@@ -182,6 +231,37 @@ exports.updateParticipant = async (req, res) => {
 
     await doc.save();
     res.json({ message: "Participant updated", participant: doc });
+
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+exports.deleteParticipant = async (req, res) => {
+  try {
+    const schema = Joi.object({
+      source: Joi.string().valid("school", "district").required(),
+    });
+
+    const { error } = schema.validate(req.query);
+    if (error) return res.status(400).json({ message: error.details[0].message });
+
+    const { id } = req.params;
+    const { source } = req.query;
+
+    const Model = source === "school" ? Participant : DistrictParticipant;
+
+    const participant = await Model.findById(id);
+    if (!participant) return res.status(404).json({ message: "Participant not found" });
+
+    // Restrict delete if frozen
+    if (participant.frozen)
+      return res.status(400).json({ message: "Cannot delete a frozen participant" });
+
+    await Model.deleteOne({ _id: id });
+
+    res.json({ message: "Participant deleted successfully" });
+
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
