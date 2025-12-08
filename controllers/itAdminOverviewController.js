@@ -204,12 +204,8 @@ exports.getStudentsYetToReport = async (req, res) => {
       { $sort: { count: -1, schoolName: 1 } },
     ]);
 
-    // District-wise yet to report (combine school + district models, not frozen)
-    const [schAgg, distAgg, districts] = await Promise.all([
-      Participant.aggregate([
-        { $match: notFrozenFilter(base) },
-        { $group: { _id: "$districtId", count: { $sum: 1 } } },
-      ]),
+    // District-wise yet to report (DISTRICT participants only, not frozen)
+    const [distAgg, districts] = await Promise.all([
       DistrictParticipant.aggregate([
         { $match: notFrozenFilter(base) },
         { $group: { _id: "$districtId", count: { $sum: 1 } } },
@@ -218,14 +214,11 @@ exports.getStudentsYetToReport = async (req, res) => {
     ]);
 
     const districtNameMap = new Map(districts.map(d => [String(d._id), d.districtName]));
-    const districtCounts = new Map();
-    schAgg.forEach(r => districtCounts.set(String(r._id), (districtCounts.get(String(r._id)) || 0) + r.count));
-    distAgg.forEach(r => districtCounts.set(String(r._id), (districtCounts.get(String(r._id)) || 0) + r.count));
 
-    const districtWise = Array.from(districtCounts.entries()).map(([id, count]) => ({
-      districtId: id,
-      districtName: districtNameMap.get(String(id)) || "",
-      count,
+    const districtWise = distAgg.map((r) => ({
+      districtId: String(r._id),
+      districtName: districtNameMap.get(String(r._id)) || "",
+      count: r.count,
     })).sort((a,b)=> b.count - a.count || a.districtName.localeCompare(b.districtName));
 
     res.json({ schoolWise: schoolYet, districtWise });
