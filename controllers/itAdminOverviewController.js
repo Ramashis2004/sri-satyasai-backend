@@ -230,12 +230,17 @@ exports.getStudentsYetToReport = async (req, res) => {
 // Report: Participants by District (gender split + total)
 exports.getParticipantsByDistrictReport = async (req, res) => {
   try {
-    const { eventId = "", districtId = "", scope = "", frozen = "true" } = req.query || {};
+    const { eventId = "", districtId = "", scope = "", frozen = "true", all = "false" } = req.query || {};
     const base = {};
     if (eventId) base.eventId = eventId;
     if (districtId) base.districtId = districtId;
-    const useFrozen = String(frozen).toLowerCase() !== "false";
-    if (useFrozen) base.frozen = true;
+    
+    // If all=true, get all participants regardless of frozen status
+    // If all=false, use the frozen parameter to filter
+    if (String(all).toLowerCase() !== "true") {
+      const useFrozen = String(frozen).toLowerCase() !== "false";
+      if (useFrozen) base.frozen = true;
+    }
 
     const norm = (g) => String(g || "").trim().toLowerCase();
     const isBoy = (g) => ["boy","boys","male","m","g","b"].includes(norm(g));
@@ -289,12 +294,17 @@ exports.getParticipantsByDistrictReport = async (req, res) => {
 // Report: Teachers by District (role columns + total)
 exports.getTeachersByDistrictReport = async (req, res) => {
   try {
-    const { eventId = "", districtId = "", scope = "", frozen = "true" } = req.query || {};
+    const { eventId = "", districtId = "", scope = "", frozen = "true", all = "false" } = req.query || {};
     const base = {};
     if (eventId) base.eventId = eventId;
     if (districtId) base.districtId = districtId;
-    const useFrozen = String(frozen).toLowerCase() !== "false";
-    if (useFrozen) base.frozen = true;
+    
+    // If all=true, get all teachers regardless of frozen status
+    // If all=false, use the frozen parameter to filter
+    if (String(all).toLowerCase() !== "true") {
+      const useFrozen = String(frozen).toLowerCase() !== "false";
+      if (useFrozen) base.frozen = true;
+    }
 
     const fetch = async (Model) => await Model.find(base).select("districtId member").lean();
 
@@ -351,12 +361,17 @@ exports.getTeachersByDistrictReport = async (req, res) => {
 // Report: Teachers by School (role columns + total)
 exports.getTeachersBySchoolReport = async (req, res) => {
   try {
-    const { eventId = "", districtId = "", frozen = "true" } = req.query || {};
+    const { eventId = "", districtId = "", frozen = "true", all = "false" } = req.query || {};
     const base = {};
     if (eventId) base.eventId = eventId;
     if (districtId) base.districtId = districtId;
-    const useFrozen = String(frozen).toLowerCase() !== "false";
-    if (useFrozen) base.frozen = true;
+    
+    // If all=true, get all teachers regardless of frozen status
+    // If all=false, use the frozen parameter to filter
+    if (String(all).toLowerCase() !== "true") {
+      const useFrozen = String(frozen).toLowerCase() !== "false";
+      if (useFrozen) base.frozen = true;
+    }
 
     // Only school-level accompanying teachers have schoolName
     const docs = await AccompanyingTeacher.find(base).select("schoolName member").lean();

@@ -5,13 +5,14 @@ const Event = require("../models/eventModel");
 const DistrictEvent = require("../models/districtEventModel");
 
 function buildFilters(query) {
-  const { eventId, districtId, schoolName, q, present, frozen, gender } = query || {};
+  const { eventId, districtId, schoolName, q, present, frozen, gender, all } = query || {};
   const base = {};
   if (eventId) base.eventId = eventId;
   if (districtId) base.districtId = districtId;
   if (typeof schoolName !== "undefined" && schoolName !== "") base.schoolName = schoolName;
   if (typeof present !== "undefined" && present !== "") base.present = String(present) === "true";
-  if (typeof frozen !== "undefined" && frozen !== "") base.frozen = String(frozen) === "true";
+  // Only apply frozen filter if all is not "true"
+  if (String(all) !== "true" && typeof frozen !== "undefined" && frozen !== "") base.frozen = String(frozen) === "true";
   if (typeof gender !== "undefined" && gender !== "") base.gender = gender;
   return { base, q: (q || "").trim().toLowerCase() };
 }
