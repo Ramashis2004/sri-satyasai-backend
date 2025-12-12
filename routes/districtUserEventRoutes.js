@@ -8,6 +8,7 @@ const ctrl = require("../controllers/districtUserEventController");
 router.use(auth, authorizeRoles("district_coordinator"), districtScope);
 
 router.get("/events", ctrl.listEvents);
+router.get("/other-events", ctrl.listOtherEvents);
 
 router.post("/participants", ctrl.createParticipant);
 router.get("/participants", ctrl.listParticipants);

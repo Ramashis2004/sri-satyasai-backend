@@ -128,28 +128,38 @@ exports.listTeachers = async (req, res) => {
     const toIdStrings = (arr) => arr.map((v) => String(v)).filter((v) => mongoose.Types.ObjectId.isValid(v));
     const schoolEventIds = toIdStrings(uniq(results.filter(r => r.source === 'school').map(r => r.eventId)).filter(isValid));
     const districtEventIds = toIdStrings(uniq(results.filter(r => r.source === 'district').map(r => r.eventId)).filter(isValid));
+    const otherEventIds = toIdStrings(uniq(results.map(r => r.otherEventId).filter(Boolean)).filter(isValid));
     const districtIds = toIdStrings(uniq(results.map(r => r.districtId)).filter(isValid));
 
     const Event = require("../models/eventModel");
     const DistrictEvent = require("../models/districtEventModel");
+    const OtherEvent = require("../models/otherEventModel");
     const District = require("../models/districtModel");
 
-    const [schoolEvents, distEvents, districts] = await Promise.all([
+    const [schoolEvents, distEvents, otherEvents, districts] = await Promise.all([
       schoolEventIds.length ? Event.find({ _id: { $in: schoolEventIds } }).lean().select("_id title") : [],
       districtEventIds.length ? DistrictEvent.find({ _id: { $in: districtEventIds } }).lean().select("_id title") : [],
+      otherEventIds.length ? OtherEvent.find({ _id: { $in: otherEventIds } }).lean().select("_id title") : [],
       districtIds.length ? District.find({ _id: { $in: districtIds } }).lean().select("_id districtName") : [],
     ]);
 
     const evMap = new Map(schoolEvents.map(e => [String(e._id), e.title]));
     const devMap = new Map(distEvents.map(e => [String(e._id), e.title]));
+    const otherEvMap = new Map(otherEvents.map(e => [String(e._id), e.title]));
     const dMap = new Map(districts.map(d => [String(d._id), d.districtName]));
 
-    const withNames = results.map(r => ({
-      ...r,
-      phone: r.mobile,
-      eventTitle: r.source === 'school' ? (evMap.get(String(r.eventId)) || '') : (devMap.get(String(r.eventId)) || ''),
-      districtName: dMap.get(String(r.districtId)) || '',
-    }));
+    const withNames = results.map(r => {
+      const otherEventTitle = otherEvMap.get(String(r.otherEventId)) || '';
+      return {
+        ...r,
+        phone: r.mobile,
+        eventTitle: r.source === 'school' 
+          ? (evMap.get(String(r.eventId)) || otherEventTitle) 
+          : (devMap.get(String(r.eventId)) || otherEventTitle),
+        otherEventName: otherEventTitle,
+        districtName: dMap.get(String(r.districtId)) || '',
+      };
+    });
 
     res.json(withNames);
   } catch (e) {

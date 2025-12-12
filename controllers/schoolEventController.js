@@ -2,6 +2,7 @@ const Joi = require("joi");
 const Event = require("../models/eventModel");
 const Participant = require("../models/participantModel");
 const AccompanyingTeacher = require("../models/accompanyingTeacherModel");
+const OtherEvent = require("../models/otherEventModel");
 
 function ensureEventInScope(event, scope) {
   // No scoping: allow all events
@@ -85,6 +86,16 @@ exports.listEvents = async (req, res) => {
   try {
     const events = await Event.find({}).sort({ date: -1, createdAt: -1 });
     res.json(events);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+// List admin-level Other Events for school users (view-only)
+exports.listOtherEvents = async (req, res) => {
+  try {
+    const items = await OtherEvent.find().sort({ date: -1, createdAt: -1 });
+    res.json(items);
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -235,6 +246,7 @@ exports.createTeacher = async (req, res) => {
       member: Joi.string().allow(""),
       gender: Joi.string().allow(""),
       eventId: Joi.string().allow(""),
+      otherEventId: Joi.string().allow(""),
     });
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
@@ -248,6 +260,13 @@ exports.createTeacher = async (req, res) => {
       eventId = ev._id;
     }
 
+    let otherEventId = undefined;
+    if (req.body.otherEventId) {
+      const ev = await OtherEvent.findById(req.body.otherEventId);
+      if (!ev) return res.status(404).json({ message: "Other event not found" });
+      otherEventId = ev._id;
+    }
+
     const teacher = await AccompanyingTeacher.create({
       name: req.body.name,
       email: req.body.email,
@@ -255,6 +274,7 @@ exports.createTeacher = async (req, res) => {
       member: req.body.member,
       gender: req.body.gender,
       eventId,
+      otherEventId,
       districtId,
       schoolName,
       createdBy: req.user.id,
@@ -285,6 +305,7 @@ exports.updateTeacher = async (req, res) => {
       member: Joi.string().allow(""),
       gender: Joi.string().allow(""),
       eventId: Joi.string().allow(""),
+      otherEventId: Joi.string().allow(""),
     });
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
@@ -305,6 +326,16 @@ exports.updateTeacher = async (req, res) => {
         const ev = await Event.findById(req.body.eventId);
         if (!ev || !ensureEventInScope(ev, req.schoolScope)) return res.status(404).json({ message: "Event not found" });
         t.eventId = ev._id;
+      }
+    }
+
+    if (req.body.otherEventId != null) {
+      if (!req.body.otherEventId) {
+        t.otherEventId = undefined;
+      } else {
+        const ev = await OtherEvent.findById(req.body.otherEventId);
+        if (!ev) return res.status(404).json({ message: "Other event not found" });
+        t.otherEventId = ev._id;
       }
     }
 

@@ -15,6 +15,9 @@ router.get("/events/:id", ctrl.getEvent);
 router.patch("/events/:id", ctrl.updateEvent);
 router.delete("/events/:id", ctrl.deleteEvent);
 
+// Admin Other Events (view-only for schools)
+router.get("/other-events", ctrl.listOtherEvents);
+
 // Participants
 router.post("/participants", ctrl.createParticipant);
 router.get("/participants", ctrl.listParticipants);

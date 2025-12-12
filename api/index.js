@@ -9,6 +9,7 @@ const adminRoutes = require("../routes/adminRoutes");
 const districtRoutes = require("../routes/districtRoutes");
 const schoolEventRoutes = require("../routes/schoolEventRoutes");
 const adminEventRoutes = require("../routes/adminEventRoutes");
+const adminOtherEventRoutes = require("../routes/otherEventAdminRoutes");
 const adminDistrictEventRoutes = require("../routes/districtEventAdminRoutes");
 const adminEvaluationRoutes = require("../routes/adminEvaluationRoutes");
 const adminAnnouncementRoutes = require("../routes/adminAnnouncementRoutes");
@@ -41,6 +42,7 @@ app.get("/health", (req, res) => {
 app.use("/api", authRoutes);
 app.use("/api/admin", adminEventRoutes);
 app.use("/api/admin", adminDistrictEventRoutes);
+app.use("/api/admin", adminOtherEventRoutes);
 app.use("/api/admin", adminEvaluationRoutes);
 app.use("/api/admin", adminAnnouncementRoutes);
 app.use("/api/admin", adminRoutes);

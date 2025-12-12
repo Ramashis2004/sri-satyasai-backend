@@ -8,6 +8,7 @@ const accompanyingTeacherSchema = new mongoose.Schema(
     member: { type: String, trim: true },
     gender: { type: String, trim: true },
     eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
+    otherEventId: { type: mongoose.Schema.Types.ObjectId, ref: "OtherEvent" },
     districtId: { type: mongoose.Schema.Types.ObjectId, ref: "District", required: true },
     schoolName: { type: String, required: true, trim: true },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "SchoolUser", required: true },

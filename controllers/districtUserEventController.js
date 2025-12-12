@@ -2,6 +2,7 @@ const Joi = require("joi");
 const DistrictEvent = require("../models/districtEventModel");
 const DistrictParticipant = require("../models/districtParticipantModel");
 const DistrictTeacher = require("../models/districtAccompanyingTeacherModel");
+const OtherEvent = require("../models/otherEventModel");
 
 exports.listEvents = async (req, res) => {
   try {
@@ -85,6 +86,15 @@ exports.deleteParticipant = async (req, res) => {
 };
 
 // Teachers (Accompanying Guru)
+exports.listOtherEvents = async (req, res) => {
+  try {
+    const items = await OtherEvent.find().sort({ date: -1, createdAt: -1 });
+    res.json(items);
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
 exports.createTeacher = async (req, res) => {
   try {
     const schema = Joi.object({
@@ -94,12 +104,12 @@ exports.createTeacher = async (req, res) => {
       member: Joi.string().allow(""),
       gender: Joi.string().allow(""),
       eventId: Joi.string().allow(""),
+      otherEventId: Joi.string().allow(""),
     });
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
 
-    // ⬇️ Extract from req.body
-    const { name, email, mobile, member, gender, eventId } = req.body;
+    const { name, email, mobile, member, gender, eventId, otherEventId } = req.body;
     const districtId = req.districtScope.districtId;
 
     let _eventId = null;
@@ -109,7 +119,13 @@ exports.createTeacher = async (req, res) => {
       _eventId = ev._id;
     }
 
-    // 🔥 Duplicate validation fixed
+    let _otherEventId = null;
+    if (otherEventId) {
+      const ev = await OtherEvent.findById(otherEventId);
+      if (!ev) return res.status(404).json({ message: "Other event not found" });
+      _otherEventId = ev._id;
+    }
+
     const exists = await DistrictTeacher.findOne({
       name,
       districtId,
@@ -123,7 +139,6 @@ exports.createTeacher = async (req, res) => {
       });
     }
 
-    // Create
     const doc = await DistrictTeacher.create({
       name,
       email,
@@ -131,12 +146,12 @@ exports.createTeacher = async (req, res) => {
       member,
       gender,
       eventId: _eventId,
+      otherEventId: _otherEventId,
       districtId,
       createdBy: req.user.id,
     });
 
     return res.status(201).json({ message: "Teacher created", teacher: doc });
-
   } catch (e) {
     return res.status(500).json({ message: e.message });
   }
@@ -154,7 +169,7 @@ exports.listTeachers = async (req, res) => {
 exports.updateTeacher = async (req, res) => {
   try {
     const { teacherId } = req.params;
-    const schema = Joi.object({ name: Joi.string().allow(""), email: Joi.string().email().allow(""), mobile: Joi.string().allow(""), member: Joi.string().allow(""), gender: Joi.string().allow(""), eventId: Joi.string().allow("") });
+    const schema = Joi.object({ name: Joi.string().allow(""), email: Joi.string().email().allow(""), mobile: Joi.string().allow(""), member: Joi.string().allow(""), gender: Joi.string().allow(""), eventId: Joi.string().allow(""), otherEventId: Joi.string().allow("") });
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
 
@@ -172,6 +187,15 @@ exports.updateTeacher = async (req, res) => {
         const ev = await DistrictEvent.findById(req.body.eventId);
         if (!ev) return res.status(404).json({ message: "Event not found" });
         t.eventId = ev._id;
+      }
+    }
+
+    if (req.body.otherEventId != null) {
+      if (!req.body.otherEventId) t.otherEventId = undefined;
+      else {
+        const ev = await OtherEvent.findById(req.body.otherEventId);
+        if (!ev) return res.status(404).json({ message: "Other event not found" });
+        t.otherEventId = ev._id;
       }
     }
 
