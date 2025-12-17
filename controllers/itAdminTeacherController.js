@@ -2,6 +2,7 @@ const Joi = require("joi");
 const mongoose = require("mongoose");
 const AccompanyingTeacher = require("../models/accompanyingTeacherModel");
 const DistrictAccompanyingTeacher = require("../models/districtAccompanyingTeacherModel");
+const OtherEvent = require("../models/otherEventModel");
 
 function buildFilters(query) {
   const { eventId, districtId, schoolName, q, present, frozen } = query || {};
@@ -178,6 +179,7 @@ exports.updateTeacher = async (req, res) => {
         gender: Joi.string().allow(""),
         member: Joi.string().allow(""),
         eventId: Joi.string().allow(""),
+        otherEventId: Joi.string().allow(""),
         present: Joi.boolean(),
         frozen: Joi.boolean(),
       }).required(),
@@ -205,6 +207,15 @@ exports.updateTeacher = async (req, res) => {
     if (typeof updates.gender !== "undefined") doc.gender = (updates.gender || "").toLowerCase();
     if (typeof updates.present !== "undefined") doc.present = updates.present;
     if (typeof updates.eventId !== "undefined" && updates.eventId) doc.eventId = updates.eventId;
+    if (typeof updates.otherEventId !== "undefined") {
+      if (!updates.otherEventId) {
+        doc.otherEventId = undefined;
+      } else {
+        const ev = await OtherEvent.findById(updates.otherEventId);
+        if (!ev) return res.status(404).json({ message: "Other event not found" });
+        doc.otherEventId = ev._id;
+      }
+    }
     if (typeof updates.frozen !== "undefined") doc.frozen = updates.frozen;
 
     await doc.save();
@@ -275,6 +286,59 @@ exports.finalizeTeachers = async (req, res) => {
 
     await Promise.all(ops);
     res.json({ message: freeze ? "Teachers frozen" : "Teachers unfrozen" });
+  } catch (e) {
+    res.status(500).json({ message: e.message });
+  }
+};
+
+exports.listRemainingOtherEvents = async (req, res) => {
+  try {
+    const { target = "school", districtId, schoolName } = req.query || {};
+
+    const eventFilter = {};
+    if (target === "parents") eventFilter.forParents = true;
+    else if (target === "district") eventFilter.forDistrict = true;
+    else eventFilter.forSchool = true;
+
+    const baseTeacherFilter = { otherEventId: { $ne: null } };
+    const schoolTeacherFilter = { ...baseTeacherFilter };
+    const districtTeacherFilter = { ...baseTeacherFilter };
+
+    if (target === "school") {
+      if (districtId) schoolTeacherFilter.districtId = districtId;
+      if (schoolName) schoolTeacherFilter.schoolName = schoolName;
+    } else {
+      if (districtId) {
+        schoolTeacherFilter.districtId = districtId;
+        districtTeacherFilter.districtId = districtId;
+      }
+    }
+
+    let events, schoolTeachers, districtTeachers;
+    if (target === "school") {
+      [events, schoolTeachers] = await Promise.all([
+        OtherEvent.find(eventFilter).sort({ date: -1, createdAt: -1 }).lean(),
+        AccompanyingTeacher.find(schoolTeacherFilter).lean().select("otherEventId"),
+      ]);
+      districtTeachers = [];
+    } else {
+      [events, schoolTeachers, districtTeachers] = await Promise.all([
+        OtherEvent.find(eventFilter).sort({ date: -1, createdAt: -1 }).lean(),
+        AccompanyingTeacher.find(schoolTeacherFilter).lean().select("otherEventId"),
+        DistrictAccompanyingTeacher.find(districtTeacherFilter).lean().select("otherEventId"),
+      ]);
+    }
+
+    const used = new Set();
+    schoolTeachers.forEach((t) => {
+      if (t.otherEventId) used.add(String(t.otherEventId));
+    });
+    (districtTeachers || []).forEach((t) => {
+      if (t.otherEventId) used.add(String(t.otherEventId));
+    });
+
+    const remaining = events.filter((ev) => !used.has(String(ev._id)));
+    res.json(remaining);
   } catch (e) {
     res.status(500).json({ message: e.message });
   }

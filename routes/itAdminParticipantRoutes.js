@@ -21,6 +21,7 @@ router.post("/teachers", tctrl.createTeacher);
 router.patch("/teachers/:id", tctrl.updateTeacher);
 router.delete("/teachers/:id", tctrl.deleteTeacher);
 router.post("/teachers/finalize", tctrl.finalizeTeachers);
+router.get("/teachers/remaining-other-events", tctrl.listRemainingOtherEvents);
 
 // Read-only event listings for IT Admin filters
 router.get("/events", adminEventCtrl.list);
