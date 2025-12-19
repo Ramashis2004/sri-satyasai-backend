@@ -3,8 +3,13 @@ const DistrictEvent = require("../models/districtEventModel");
 
 exports.list = async (req, res) => {
   try {
+    const CULTURAL_EVENT_ID = "694599d2de9c7cb446c0034b";
     const items = await DistrictEvent.find().sort({ date: -1, createdAt: -1 });
-    res.json(items);
+    // Hide the special Cultural Programme from public/admin listings
+    const visibleItems = items.filter(
+      (ev) => String(ev._id) !== String(CULTURAL_EVENT_ID)
+    );
+    res.json(visibleItems);
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -64,7 +69,7 @@ exports.update = async (req, res) => {
     if (req.body.description !== undefined) update.description = req.body.description;
     if (req.body.date !== undefined) update.date = req.body.date ? new Date(req.body.date) : null;
     if (req.body.venue !== undefined) update.venue = req.body.venue;
-     if (req.body.gender !== undefined) update.gender = req.body.gender;
+    if (req.body.gender !== undefined) update.gender = req.body.gender;
 
     const saved = await DistrictEvent.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!saved) return res.status(404).json({ message: "Event not found" });

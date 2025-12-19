@@ -84,7 +84,7 @@ exports.deleteParticipant = async (req, res) => {
 
 exports.listEvents = async (req, res) => {
   try {
-    const events = await Event.find({}).sort({ date: -1, createdAt: -1 });
+    const events = await Event.find({ isHidden: { $ne: true } }).sort({ date: -1, createdAt: -1 });
     res.json(events);
   } catch (e) {
     res.status(500).json({ message: e.message });

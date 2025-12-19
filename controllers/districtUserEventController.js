@@ -4,6 +4,9 @@ const DistrictParticipant = require("../models/districtParticipantModel");
 const DistrictTeacher = require("../models/districtAccompanyingTeacherModel");
 const OtherEvent = require("../models/otherEventModel");
 
+// Special hidden Cultural Programme for district participants
+const CULTURAL_EVENT_ID = "694599d2de9c7cb446c0034b";
+
 exports.listEvents = async (req, res) => {
   try {
     const items = await DistrictEvent.find().sort({ date: -1, createdAt: -1 });
@@ -25,8 +28,16 @@ exports.createParticipant = async (req, res) => {
     const { error } = schema.validate(req.body);
     if (error) return res.status(400).json({ message: error.details[0].message });
 
-    const ev = await DistrictEvent.findById(req.body.eventId);
-    if (!ev) return res.status(404).json({ message: "Event not found" });
+    let ev;
+    // Allow the special hidden Cultural Programme ID even if there is no
+    // corresponding DistrictEvent document. We still want to persist
+    // participants against this fixed ObjectId.
+    if (String(req.body.eventId) === String(CULTURAL_EVENT_ID)) {
+      ev = { _id: CULTURAL_EVENT_ID };
+    } else {
+      ev = await DistrictEvent.findById(req.body.eventId);
+      if (!ev) return res.status(404).json({ message: "Event not found" });
+    }
 
     const doc = await DistrictParticipant.create({
       name: req.body.name,

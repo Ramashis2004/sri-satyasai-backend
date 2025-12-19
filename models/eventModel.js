@@ -11,6 +11,10 @@ const eventSchema = new mongoose.Schema(
     isGroupEvent: { type: Boolean, default: false },
     participantCount: { type: Number, min: 2, default: null },
 
+    // Hidden/system events like Cultural Programme (not shown in normal listings)
+    isHidden: { type: Boolean, default: false },
+    eventType: { type: String, enum: ["normal", "cultural"], default: "normal" },
+
     // createdBy is optional to allow admin-created events
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "SchoolUser", required: false },
   },

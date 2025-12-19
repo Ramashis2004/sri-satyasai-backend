@@ -4,6 +4,9 @@ const DistrictParticipant = require("../models/districtParticipantModel");
 const Event = require("../models/eventModel");
 const DistrictEvent = require("../models/districtEventModel");
 
+// Special hidden Cultural Programme for district participants (no visible DistrictEvent row)
+const CULTURAL_EVENT_ID = "6942fd3542c93c6b995fc5a8";
+
 function buildFilters(query) {
   const { eventId, districtId, schoolName, q, present, frozen, gender, all } = query || {};
   const base = {};
@@ -78,11 +81,22 @@ exports.listParticipants = async (req, res) => {
     const devMap = new Map(distEvents.map(e => [String(e._id), e.title]));
     const dMap = new Map(districts.map(d => [String(d._id), d.districtName]));
 
-    const withNames = results.map(r => ({
-      ...r,
-      eventTitle: r.source === 'school' ? (evMap.get(String(r.eventId)) || '') : (devMap.get(String(r.eventId)) || ''),
-      districtName: dMap.get(String(r.districtId)) || '',
-    }));
+    const withNames = results.map(r => {
+      const idStr = String(r.eventId || "");
+      let eventTitle;
+      if (r.source === 'school') {
+        eventTitle = evMap.get(idStr) || '';
+      } else {
+        // District source: map normally, but for the hidden cultural programme
+        // provide a friendly label even though there's no DistrictEvent row.
+        eventTitle = devMap.get(idStr) || (idStr === String(CULTURAL_EVENT_ID) ? 'Cultural Programme' : '');
+      }
+      return {
+        ...r,
+        eventTitle,
+        districtName: dMap.get(String(r.districtId)) || '',
+      };
+    });
 
     res.json(withNames);
   } catch (e) {
@@ -153,14 +167,22 @@ exports.createParticipant = async (req, res) => {
   }
       if (!districtId)
         return res.status(400).json({ message: "districtId is required for district participants" });
-      const dev = await DistrictEvent.findById(eventId);
-      if (!dev) return res.status(404).json({ message: "Event not found" });
+
+      // For normal district events, validate against DistrictEvent collection.
+      // For the hidden Cultural Event, allow using CULTURAL_EVENT_ID directly
+      // even though there is no visible DistrictEvent row.
+      let eventRefId = eventId;
+      if (String(eventId) !== String(CULTURAL_EVENT_ID)) {
+        const dev = await DistrictEvent.findById(eventId);
+        if (!dev) return res.status(404).json({ message: "Event not found" });
+        eventRefId = dev._id;
+      }
 
       const participant = await DistrictParticipant.create({
         name,
         className,
         gender,
-        eventId: dev._id,
+        eventId: eventRefId,
         districtId,
         createdBy: req.user.id,
       });
