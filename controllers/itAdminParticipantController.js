@@ -5,7 +5,7 @@ const Event = require("../models/eventModel");
 const DistrictEvent = require("../models/districtEventModel");
 
 // Special hidden Cultural Programme for district participants (no visible DistrictEvent row)
-const CULTURAL_EVENT_ID = "6942fd3542c93c6b995fc5a8";
+const CULTURAL_EVENT_ID = "694599d2de9c7cb446c0034b";
 
 function buildFilters(query) {
   const { eventId, districtId, schoolName, q, present, frozen, gender, all } = query || {};
